@@ -168,7 +168,35 @@ const Dashboard = () => {
       {user?.is_admin ? (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <h2 style={{ fontSize: '1.2rem', marginBottom: '16px' }}>Solicitações Pendentes (Admin)</h2>
-          {/* ... render pending users ... */}
+          {pendingUsers.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {pendingUsers.map((pUser) => (
+                <div key={pUser.id} className="glass" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ background: 'rgba(0,0,0,0.05)', padding: '10px', borderRadius: '50%' }}>
+                      <User size={20} color="var(--primary)" />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{pUser.nome}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>@{pUser.login}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={() => handleApprove(pUser.id, true)} style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}>
+                      <CheckCircle size={16} /> Aprovar
+                    </button>
+                    <button onClick={() => handleApprove(pUser.id, false)} style={{ background: 'var(--error)', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}>
+                      <XCircle size={16} /> Rejeitar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="glass" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              Nenhuma solicitação de cadastro pendente no momento.
+            </div>
+          )}
         </motion.div>
       ) : (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
