@@ -66,7 +66,7 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ error: 'Sua conta ainda não foi aprovada por um administrador.' });
     }
 
-    const token = jwt.sign({ id: user.id, is_admin: user.is_admin }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: user.id, is_admin: user.is_admin, codigo_cc: user.codigo_cc }, JWT_SECRET, { expiresIn: '1d' });
 
     res.json({
       token,

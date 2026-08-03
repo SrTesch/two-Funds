@@ -7,6 +7,7 @@ export interface AuthRequest extends Request {
   user?: {
     id: number;
     is_admin: boolean;
+    codigo_cc?: string;
   };
 }
 

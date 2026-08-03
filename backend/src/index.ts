@@ -4,6 +4,10 @@ import { pool } from './db';
 import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
 import jointRoutes from './routes/joint_account';
+import categoriasRoutes from './routes/categorias';
+import lancamentosRoutes from './routes/lancamentos';
+import faturasRoutes from './routes/faturas';
+import contasRoutes from './routes/contas';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -17,6 +21,10 @@ app.use(express.json());
 app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/joint', jointRoutes);
+app.use('/categorias', categoriasRoutes);
+app.use('/lancamentos', lancamentosRoutes);
+app.use('/faturas', faturasRoutes);
+app.use('/contas', contasRoutes);
 
 app.get('/health', async (req, res) => {
   try {
