@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import { ArrowLeft, Users, Key, PlusCircle, CheckCircle, XCircle } from 'lucide-react';
 
 const JointAccount = () => {
@@ -20,13 +20,13 @@ const JointAccount = () => {
     if (!token) return navigate('/login');
 
     try {
-      const res = await axios.get('http://localhost:3000/auth/profile', {
+      const res = await api.get('/auth/profile', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUser(res.data);
       
       if (res.data.codigo_cc) {
-        const reqs = await axios.get('http://localhost:3000/joint/requests', {
+        const reqs = await api.get('/joint/requests', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setRequests(reqs.data);
@@ -47,7 +47,7 @@ const JointAccount = () => {
     setError(''); setMessage('');
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.post('http://localhost:3000/joint/join', { codigo_cc: inputCode }, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.post('/joint/join', { codigo_cc: inputCode }, { headers: { Authorization: `Bearer ${token}` } });
       setMessage(res.data.message);
       setMode('');
     } catch (err) {
@@ -60,7 +60,7 @@ const JointAccount = () => {
     setError(''); setMessage('');
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/joint/generate', { nome: inputName }, { headers: { Authorization: `Bearer ${token}` } });
+      await api.post('/joint/generate', { nome: inputName }, { headers: { Authorization: `Bearer ${token}` } });
       setMessage('Conta conjunta criada!');
       setMode('');
       fetchProfile(); // refresh state
@@ -74,7 +74,7 @@ const JointAccount = () => {
     setError(''); setMessage('');
     try {
       const token = localStorage.getItem('token');
-      await axios.put('http://localhost:3000/joint/rename', { nome: inputName }, { headers: { Authorization: `Bearer ${token}` } });
+      await api.put('/joint/rename', { nome: inputName }, { headers: { Authorization: `Bearer ${token}` } });
       setMessage('Nome alterado com sucesso!');
       setMode('');
       fetchProfile();
@@ -86,7 +86,7 @@ const JointAccount = () => {
   const handleApprove = async (id, approved) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:3000/joint/approve/${id}`, { approved }, { headers: { Authorization: `Bearer ${token}` } });
+      await api.post(`/joint/approve/${id}`, { approved }, { headers: { Authorization: `Bearer ${token}` } });
       fetchProfile(); // reload requests
     } catch (err) {
       console.error(err);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
+import api from '../services/api';
 import { X, ArrowRightLeft } from 'lucide-react';
 
 const TransferenciaModal = ({ isOpen, onClose, onTransferenciaDone }) => {
@@ -24,13 +24,13 @@ const TransferenciaModal = ({ isOpen, onClose, onTransferenciaDone }) => {
     try {
       const token = localStorage.getItem('token');
       // Buscar contas do próprio usuário
-      const resMinhas = await axios.get('http://localhost:3000/contas', {
+      const resMinhas = await api.get('/contas', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setContasMinhas(resMinhas.data);
 
       // Buscar todas as contas vinculadas à conta conjunta (inclui as do parceiro)
-      const resTodas = await axios.get('http://localhost:3000/contas?joint=true', {
+      const resTodas = await api.get('/contas?joint=true', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setContasTodas(resTodas.data);
@@ -56,7 +56,7 @@ const TransferenciaModal = ({ isOpen, onClose, onTransferenciaDone }) => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/contas/transferir', {
+      await api.post('/contas/transferir', {
         conta_origem_id: contaOrigemId,
         conta_destino_id: contaDestinoId,
         valor: parseFloat(valor),

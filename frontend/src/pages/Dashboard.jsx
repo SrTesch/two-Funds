@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import { User, CheckCircle, XCircle, Plus, TrendingUp, TrendingDown, DollarSign, Landmark, ArrowRightLeft, Tag } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import LancamentoModal from '../components/LancamentoModal';
@@ -28,7 +28,7 @@ const Dashboard = () => {
   const fetchLancamentos = useCallback(async (isPersonal) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:3000/lancamentos?personal=${isPersonal}`, {
+      const response = await api.get(`/lancamentos?personal=${isPersonal}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setLancamentos(response.data);
@@ -40,7 +40,7 @@ const Dashboard = () => {
   const fetchContas = useCallback(async (isJoint) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:3000/contas?joint=${isJoint}`, {
+      const response = await api.get(`/contas?joint=${isJoint}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setContas(response.data);
@@ -70,7 +70,7 @@ const Dashboard = () => {
 
       if (parsedUser.is_admin) {
         try {
-          const response = await axios.get('http://localhost:3000/admin/pending', {
+          const response = await api.get('/admin/pending', {
             headers: { Authorization: `Bearer ${token}` }
           });
           setPendingUsers(response.data);
@@ -90,7 +90,7 @@ const Dashboard = () => {
   const handleApprove = async (id, approved) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:3000/admin/approve/${id}`, 
+      await api.post(`/admin/approve/${id}`, 
         { approved },
         { headers: { Authorization: `Bearer ${token}` } }
       );

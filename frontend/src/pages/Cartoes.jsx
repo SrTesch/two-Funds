@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import { CreditCard, Check, Calendar, Plus } from 'lucide-react';
 import FaturaRetroativaModal from '../components/FaturaRetroativaModal';
 
@@ -17,7 +17,7 @@ const Cartoes = () => {
   const fetchFaturas = useCallback(async (isPersonal) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:3000/faturas?personal=${isPersonal}`, {
+      const response = await api.get(`/faturas?personal=${isPersonal}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setFaturas(response.data);
@@ -31,7 +31,7 @@ const Cartoes = () => {
   const fetchContas = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/contas', {
+      const response = await api.get('/contas', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setContas(response.data);
@@ -62,7 +62,7 @@ const Cartoes = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/faturas/pagar', { 
+      await api.post('/faturas/pagar', { 
         lancamentos_ids: lancamentosIds,
         faturas_avulsas_ids: faturasAvulsasIds,
         conta_id: contaId ? parseInt(contaId) : null

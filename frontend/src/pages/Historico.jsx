@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import { Filter, ArrowRightLeft, Landmark } from 'lucide-react';
 
 const Historico = () => {
@@ -18,7 +18,7 @@ const Historico = () => {
   const fetchLancamentos = useCallback(async (isPersonal) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:3000/lancamentos?personal=${isPersonal}`, {
+      const response = await api.get(`/lancamentos?personal=${isPersonal}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setLancamentos(response.data);
@@ -30,7 +30,7 @@ const Historico = () => {
   const fetchTransferencias = useCallback(async (isJoint) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:3000/contas/transferencias?joint=${isJoint}`, {
+      const response = await api.get(`/contas/transferencias?joint=${isJoint}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTransferencias(response.data);

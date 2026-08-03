@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
+import api from '../services/api';
 import { X } from 'lucide-react';
 
 const LancamentoModal = ({ isOpen, onClose, viewMode, onLancamentoAdded }) => {
@@ -27,7 +27,7 @@ const LancamentoModal = ({ isOpen, onClose, viewMode, onLancamentoAdded }) => {
   const fetchCategorias = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/categorias', {
+      const response = await api.get('/categorias', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCategorias(response.data);
@@ -39,7 +39,7 @@ const LancamentoModal = ({ isOpen, onClose, viewMode, onLancamentoAdded }) => {
   const fetchContas = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/contas', {
+      const response = await api.get('/contas', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setContas(response.data);
@@ -58,7 +58,7 @@ const LancamentoModal = ({ isOpen, onClose, viewMode, onLancamentoAdded }) => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/lancamentos', {
+      await api.post('/lancamentos', {
         categoria_id: categoriaId,
         conta_id: contaId ? parseInt(contaId) : null,
         descricao,

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import { UserPlus } from 'lucide-react';
 
 const Register = () => {
@@ -22,7 +22,7 @@ const Register = () => {
     setLoading(true);
     
     try {
-      const response = await axios.post('http://localhost:3000/auth/register', formData);
+      const response = await api.post('/auth/register', formData);
       setSuccess(response.data.message);
       setTimeout(() => navigate('/login'), 3000);
     } catch (err) {

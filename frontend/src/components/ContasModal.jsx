@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
+import api from '../services/api';
 import { X, Plus, Edit2, Trash2, Check, Landmark, DollarSign } from 'lucide-react';
 
 const BANCOS_PREDEFINIDOS = [
@@ -39,7 +39,7 @@ const ContasModal = ({ isOpen, onClose, onContasUpdated }) => {
   const fetchContas = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/contas', {
+      const response = await api.get('/contas', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setContas(response.data);
@@ -80,7 +80,7 @@ const ContasModal = ({ isOpen, onClose, onContasUpdated }) => {
     try {
       const token = localStorage.getItem('token');
       if (editingConta) {
-        await axios.put(`http://localhost:3000/contas/${editingConta.id}`, {
+        await api.put(`/contas/${editingConta.id}`, {
           nome,
           banco,
           cor
@@ -88,7 +88,7 @@ const ContasModal = ({ isOpen, onClose, onContasUpdated }) => {
           headers: { Authorization: `Bearer ${token}` }
         });
       } else {
-        await axios.post('http://localhost:3000/contas', {
+        await api.post('/contas', {
           nome,
           banco,
           saldo_atual: parseFloat(saldoAtual || 0),
@@ -111,7 +111,7 @@ const ContasModal = ({ isOpen, onClose, onContasUpdated }) => {
   const handleSalvarSaldo = async (contaId) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:3000/contas/${contaId}/saldo`, {
+      await api.put(`/contas/${contaId}/saldo`, {
         saldo_atual: parseFloat(novoSaldo)
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -130,7 +130,7 @@ const ContasModal = ({ isOpen, onClose, onContasUpdated }) => {
     if (!window.confirm('Tem certeza que deseja excluir esta conta bancária?')) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:3000/contas/${id}`, {
+      await api.delete(`/contas/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       await fetchContas();

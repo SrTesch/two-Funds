@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import { Save, LogOut, User, ArrowLeft } from 'lucide-react';
 
 const AVAILABLE_AVATARS = [
@@ -31,7 +31,7 @@ const Profile = () => {
       }
 
       try {
-        const response = await axios.get('http://localhost:3000/auth/profile', {
+        const response = await api.get('/auth/profile', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUser(response.data);
@@ -52,7 +52,7 @@ const Profile = () => {
     
     const token = localStorage.getItem('token');
     try {
-      await axios.put('http://localhost:3000/auth/profile', 
+      await api.put('/auth/profile', 
         { nome, avatar, senha },
         { headers: { Authorization: `Bearer ${token}` } }
       );

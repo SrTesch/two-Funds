@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
+import api from '../services/api';
 import { X, CreditCard } from 'lucide-react';
 
 const FaturaRetroativaModal = ({ isOpen, onClose, viewMode, onFaturaAdded }) => {
@@ -21,7 +21,7 @@ const FaturaRetroativaModal = ({ isOpen, onClose, viewMode, onFaturaAdded }) => 
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/faturas/retroativa', {
+      await api.post('/faturas/retroativa', {
         descricao: descricao || `Fatura Cartão Anterior (${mesReferencia})`,
         valor: parseFloat(valor),
         mes_referencia: mesReferencia,
