@@ -9,6 +9,8 @@ import ContasModal from '../components/ContasModal';
 import TransferenciaModal from '../components/TransferenciaModal';
 import CategoriasModal from '../components/CategoriasModal';
 
+import { parseLocalDate } from '../utils/date';
+
 const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [pendingUsers, setPendingUsers] = useState([]);
@@ -125,7 +127,7 @@ const Dashboard = () => {
 
   // Lançamentos do Mês Atual (para KPIs e gráficos)
   const lancamentosMesAtual = lancamentos.filter(l => {
-    const d = new Date(l.data_vencimento || l.data_lancamento);
+    const d = parseLocalDate(l.data_vencimento || l.data_lancamento);
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
 

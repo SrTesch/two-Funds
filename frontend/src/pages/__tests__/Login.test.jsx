@@ -2,9 +2,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Login from '../Login';
-import axios from 'axios';
+import api from '../../services/api';
 
-vi.mock('axios');
+vi.mock('../../services/api');
 
 describe('Login Component', () => {
   it('deve renderizar o título e os inputs', () => {
@@ -21,7 +21,7 @@ describe('Login Component', () => {
   });
 
   it('deve exibir mensagem de erro se o login falhar', async () => {
-    axios.post.mockRejectedValueOnce({
+    api.post.mockRejectedValueOnce({
       response: { data: { error: 'Credenciais inválidas.' } }
     });
 

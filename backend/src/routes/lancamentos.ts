@@ -26,8 +26,10 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
     const params: any[] = [user.codigo_cc];
 
     if (personal === 'true') {
-      query += ' AND l.usuario_id = ?';
+      query += ' AND l.usuario_id = ? AND (l.is_personal = TRUE OR l.is_personal = 1)';
       params.push(user.id);
+    } else {
+      query += ' AND (l.is_personal = FALSE OR l.is_personal = 0 OR l.is_personal IS NULL)';
     }
 
     if (status) {
@@ -42,6 +44,152 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Erro interno no servidor.' });
+  }
+});
+
+// Editar lançamento existente
+router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const user = req.user;
+    if (!user || !user.codigo_cc) {
+      return res.status(403).json({ error: 'Conta conjunta não vinculada.' });
+    }
+
+    const { id } = req.params;
+    const {
+      categoria_id,
+      conta_id,
+      descricao,
+      valor,
+      tipo,
+      data_lancamento,
+      metodo_pagamento
+    } = req.body;
+
+    const [rows] = await connection.query<RowDataPacket[]>(
+      'SELECT * FROM lancamentos WHERE id = ? AND codigo_cc = ?',
+      [id, user.codigo_cc]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Lançamento não encontrado ou sem permissão.' });
+    }
+
+    const oldLanc = rows[0];
+    await connection.beginTransaction();
+
+    // Reverter o saldo da conta antiga se estava PAGO
+    if (oldLanc.status === 'PAGO' && oldLanc.conta_id) {
+      if (oldLanc.tipo === 'RECEITA') {
+        await connection.query(
+          'UPDATE contas_bancarias SET saldo_atual = saldo_atual - ? WHERE id = ?',
+          [oldLanc.valor, oldLanc.conta_id]
+        );
+      } else if (oldLanc.tipo === 'DESPESA') {
+        await connection.query(
+          'UPDATE contas_bancarias SET saldo_atual = saldo_atual + ? WHERE id = ?',
+          [oldLanc.valor, oldLanc.conta_id]
+        );
+      }
+    }
+
+    const novoValor = valor !== undefined ? parseFloat(valor) : Number(oldLanc.valor);
+    const novaContaId = conta_id !== undefined ? (conta_id ? Number(conta_id) : null) : oldLanc.conta_id;
+    const novoTipo = tipo || oldLanc.tipo;
+    const dataLanc = data_lancamento || oldLanc.data_lancamento;
+    const dataVenc = data_lancamento || oldLanc.data_vencimento;
+
+    await connection.query(
+      `UPDATE lancamentos 
+       SET categoria_id = ?, conta_id = ?, descricao = ?, valor = ?, tipo = ?, data_lancamento = ?, data_vencimento = ?, metodo_pagamento = ?
+       WHERE id = ?`,
+      [
+        categoria_id || oldLanc.categoria_id,
+        novaContaId,
+        descricao || oldLanc.descricao,
+        novoValor,
+        novoTipo,
+        dataLanc,
+        dataVenc,
+        metodo_pagamento || oldLanc.metodo_pagamento,
+        id
+      ]
+    );
+
+    // Aplicar novo saldo na nova/mesma conta bancária se o lançamento estiver PAGO
+    if (oldLanc.status === 'PAGO' && novaContaId) {
+      if (novoTipo === 'RECEITA') {
+        await connection.query(
+          'UPDATE contas_bancarias SET saldo_atual = saldo_atual + ? WHERE id = ?',
+          [novoValor, novaContaId]
+        );
+      } else if (novoTipo === 'DESPESA') {
+        await connection.query(
+          'UPDATE contas_bancarias SET saldo_atual = saldo_atual - ? WHERE id = ?',
+          [novoValor, novaContaId]
+        );
+      }
+    }
+
+    await connection.commit();
+    res.json({ message: 'Lançamento atualizado com sucesso.' });
+  } catch (error) {
+    await connection.rollback();
+    console.error(error);
+    res.status(500).json({ error: 'Erro interno ao atualizar lançamento.' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Excluir lançamento
+router.delete('/:id', authenticateToken, async (req: AuthRequest, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const user = req.user;
+    if (!user || !user.codigo_cc) {
+      return res.status(403).json({ error: 'Conta conjunta não vinculada.' });
+    }
+
+    const { id } = req.params;
+    const [rows] = await connection.query<RowDataPacket[]>(
+      'SELECT * FROM lancamentos WHERE id = ? AND codigo_cc = ?',
+      [id, user.codigo_cc]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Lançamento não encontrado ou sem permissão.' });
+    }
+
+    const lancamento = rows[0];
+    await connection.beginTransaction();
+
+    // Se o lançamento estava PAGO e atrelado a uma conta bancária, reverte o valor no saldo
+    if (lancamento.status === 'PAGO' && lancamento.conta_id) {
+      if (lancamento.tipo === 'RECEITA') {
+        await connection.query(
+          'UPDATE contas_bancarias SET saldo_atual = saldo_atual - ? WHERE id = ?',
+          [lancamento.valor, lancamento.conta_id]
+        );
+      } else if (lancamento.tipo === 'DESPESA') {
+        await connection.query(
+          'UPDATE contas_bancarias SET saldo_atual = saldo_atual + ? WHERE id = ?',
+          [lancamento.valor, lancamento.conta_id]
+        );
+      }
+    }
+
+    await connection.query('DELETE FROM lancamentos WHERE id = ?', [id]);
+    await connection.commit();
+
+    res.json({ message: 'Lançamento removido com sucesso.' });
+  } catch (error) {
+    await connection.rollback();
+    console.error(error);
+    res.status(500).json({ error: 'Erro interno ao excluir lançamento.' });
+  } finally {
+    connection.release();
   }
 });
 

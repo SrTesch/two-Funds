@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 import { X } from 'lucide-react';
 
-const LancamentoModal = ({ isOpen, onClose, viewMode, onLancamentoAdded }) => {
+const LancamentoModal = ({ isOpen, onClose, viewMode, onLancamentoAdded, lancamentoToEdit = null }) => {
   const [tipo, setTipo] = useState('DESPESA');
   const [categoriaId, setCategoriaId] = useState('');
   const [contaId, setContaId] = useState('');
@@ -21,8 +21,29 @@ const LancamentoModal = ({ isOpen, onClose, viewMode, onLancamentoAdded }) => {
     if (isOpen) {
       fetchCategorias();
       fetchContas();
+      if (lancamentoToEdit) {
+        setTipo(lancamentoToEdit.tipo || 'DESPESA');
+        setCategoriaId(lancamentoToEdit.categoria_id || '');
+        setContaId(lancamentoToEdit.conta_id || '');
+        setDescricao(lancamentoToEdit.descricao || '');
+        setValor(lancamentoToEdit.valor || '');
+        if (lancamentoToEdit.data_lancamento) {
+          setDataLancamento(String(lancamentoToEdit.data_lancamento).split('T')[0]);
+        }
+        setMetodoPagamento(lancamentoToEdit.metodo_pagamento || 'PIX');
+        setTotalParcelas(lancamentoToEdit.total_parcelas || 1);
+      } else {
+        setTipo('DESPESA');
+        setCategoriaId('');
+        setContaId('');
+        setDescricao('');
+        setValor('');
+        setDataLancamento(new Date().toISOString().split('T')[0]);
+        setMetodoPagamento('PIX');
+        setTotalParcelas(1);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, lancamentoToEdit]);
 
   const fetchCategorias = async () => {
     try {
@@ -43,7 +64,7 @@ const LancamentoModal = ({ isOpen, onClose, viewMode, onLancamentoAdded }) => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setContas(response.data);
-      if (response.data.length > 0 && !contaId) {
+      if (response.data.length > 0 && !contaId && !lancamentoToEdit) {
         setContaId(response.data[0].id);
       }
     } catch (err) {
@@ -58,24 +79,38 @@ const LancamentoModal = ({ isOpen, onClose, viewMode, onLancamentoAdded }) => {
 
     try {
       const token = localStorage.getItem('token');
-      await api.post('/lancamentos', {
-        categoria_id: categoriaId,
-        conta_id: contaId ? parseInt(contaId) : null,
-        descricao,
-        valor: parseFloat(valor),
-        tipo,
-        is_personal: viewMode === 'personal',
-        data_lancamento: dataLancamento,
-        metodo_pagamento: metodoPagamento,
-        total_parcelas: metodoPagamento === 'CREDITO' ? parseInt(totalParcelas) : 1
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      if (lancamentoToEdit) {
+        await api.put(`/lancamentos/${lancamentoToEdit.id}`, {
+          categoria_id: categoriaId,
+          conta_id: contaId ? parseInt(contaId) : null,
+          descricao,
+          valor: parseFloat(valor),
+          tipo,
+          data_lancamento: dataLancamento,
+          metodo_pagamento: metodoPagamento
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        await api.post('/lancamentos', {
+          categoria_id: categoriaId,
+          conta_id: contaId ? parseInt(contaId) : null,
+          descricao,
+          valor: parseFloat(valor),
+          tipo,
+          is_personal: viewMode === 'personal',
+          data_lancamento: dataLancamento,
+          metodo_pagamento: metodoPagamento,
+          total_parcelas: metodoPagamento === 'CREDITO' ? parseInt(totalParcelas) : 1
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
       
       onLancamentoAdded();
       handleClose();
     } catch (err) {
-      setError(err.response?.data?.error || 'Erro ao registrar lançamento.');
+      setError(err.response?.data?.error || 'Erro ao salvar lançamento.');
     } finally {
       setLoading(false);
     }
@@ -114,7 +149,9 @@ const LancamentoModal = ({ isOpen, onClose, viewMode, onLancamentoAdded }) => {
             <button onClick={handleClose} style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
               <X size={24} />
             </button>
-            <h2 style={{ fontSize: '1.25rem', marginBottom: '16px' }}>Novo Lançamento {viewMode === 'personal' ? 'Pessoal' : 'Conjunto'}</h2>
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '16px' }}>
+              {lancamentoToEdit ? 'Editar Lançamento' : `Novo Lançamento ${viewMode === 'personal' ? 'Pessoal' : 'Conjunto'}`}
+            </h2>
 
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', background: 'rgba(0,0,0,0.05)', padding: '4px', borderRadius: '12px' }}>
               <button 

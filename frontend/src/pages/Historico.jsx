@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { Filter, ArrowRightLeft, Landmark } from 'lucide-react';
+import { Filter, ArrowRightLeft, Landmark, Edit2, Trash2 } from 'lucide-react';
+import { parseLocalDate, formatLocalDate } from '../utils/date';
+import LancamentoModal from '../components/LancamentoModal';
 
 const Historico = () => {
   const [lancamentos, setLancamentos] = useState([]);
@@ -12,6 +14,10 @@ const Historico = () => {
   const [viewMode, setViewMode] = useState('personal');
   const [filtroMes, setFiltroMes] = useState(new Date().getMonth() + 1);
   const [filtroAno, setFiltroAno] = useState(new Date().getFullYear());
+
+  // Estado para Edição de Lançamento
+  const [editingLancamento, setEditingLancamento] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
   const navigate = useNavigate();
 
@@ -60,13 +66,31 @@ const Historico = () => {
     fetchData();
   }, [navigate, fetchLancamentos, fetchTransferencias, viewMode]);
 
+  const handleDeleteLancamento = async (id) => {
+    if (!window.confirm('Tem certeza que deseja excluir este lançamento?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      await api.delete(`/lancamentos/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      await fetchLancamentos(viewMode === 'personal');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao remover lançamento.');
+    }
+  };
+
+  const handleOpenEdit = (lancamento) => {
+    setEditingLancamento(lancamento);
+    setIsEditModalOpen(true);
+  };
+
   const filtradosLancamentos = lancamentos.filter(l => {
-    const d = new Date(l.data_lancamento || l.data_vencimento);
+    const d = parseLocalDate(l.data_lancamento || l.data_vencimento);
     return (d.getMonth() + 1) === Number(filtroMes) && d.getFullYear() === Number(filtroAno);
   });
 
   const filtradasTransferencias = transferencias.filter(t => {
-    const d = new Date(t.data_transferencia);
+    const d = parseLocalDate(t.data_transferencia);
     return (d.getMonth() + 1) === Number(filtroMes) && d.getFullYear() === Number(filtroAno);
   });
 
@@ -130,7 +154,7 @@ const Historico = () => {
                     <div>
                       <div style={{ fontWeight: 600 }}>{l.descricao}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {l.categoria_nome} • {l.metodo_pagamento} • {new Date(l.data_lancamento).toLocaleDateString()}
+                        {l.categoria_nome} • {l.metodo_pagamento} • {formatLocalDate(l.data_lancamento)}
                         {l.usuario_nome && <span style={{ marginLeft: '4px', fontWeight: 600 }}>({l.usuario_nome})</span>}
                       </div>
                       {l.conta_nome && (
@@ -140,11 +164,27 @@ const Historico = () => {
                       )}
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
                     <div style={{ fontWeight: 600, color: l.tipo === 'RECEITA' ? 'var(--success)' : 'var(--text-main)' }}>
                       {l.tipo === 'RECEITA' ? '+' : '-'} R$ {Number(l.valor).toFixed(2).replace('.', ',')}
                     </div>
                     {l.status === 'PENDENTE' && <span style={{ fontSize: '0.65rem', background: '#F59E0B', color: 'white', padding: '2px 6px', borderRadius: '4px' }}>PENDENTE</span>}
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                      <button 
+                        onClick={() => handleOpenEdit(l)}
+                        style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', color: 'var(--text-muted)' }}
+                        title="Editar lançamento"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteLancamento(l.id)}
+                        style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', color: 'var(--error)' }}
+                        title="Excluir lançamento"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -166,7 +206,7 @@ const Historico = () => {
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{t.descricao}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {t.conta_origem_nome} &rarr; {t.conta_destino_nome} • {new Date(t.data_transferencia).toLocaleDateString()}
+                        {t.conta_origem_nome} &rarr; {t.conta_destino_nome} • {formatLocalDate(t.data_transferencia)}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Por: {t.usuario_nome}</div>
                     </div>
@@ -180,6 +220,15 @@ const Historico = () => {
           )
         )}
       </motion.div>
+
+      {/* Modal de Edição */}
+      <LancamentoModal 
+        isOpen={isEditModalOpen}
+        onClose={() => { setIsEditModalOpen(false); setEditingLancamento(null); }}
+        viewMode={viewMode}
+        onLancamentoAdded={() => fetchLancamentos(viewMode === 'personal')}
+        lancamentoToEdit={editingLancamento}
+      />
     </div>
   );
 };
