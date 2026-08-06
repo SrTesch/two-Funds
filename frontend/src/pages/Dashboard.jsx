@@ -111,23 +111,44 @@ const Dashboard = () => {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
-  // Cálculo do Saldo Total (Das contas bancárias cadastradas ou fallback dos lançamentos pagos)
-  let saldoTotal = 0;
-  if (contas.length > 0) {
-    saldoTotal = contas.reduce((acc, c) => acc + Number(c.saldo_atual), 0);
-  } else {
-    const lancamentosPagos = lancamentos.filter(l => l.status === 'PAGO');
-    const totalReceitas = lancamentosPagos.filter(l => l.tipo === 'RECEITA').reduce((acc, l) => acc + Number(l.valor), 0);
-    const totalDespesas = lancamentosPagos.filter(l => l.tipo === 'DESPESA').reduce((acc, l) => acc + Number(l.valor), 0);
-    saldoTotal = totalReceitas - totalDespesas;
-  }
+  // Cálculo Inteligente do Saldo Total e Resumo por Membro
+  const membrosMap = {};
 
-  // Agrupamento por membro (para visão conjunta)
-  const resumoPorProprietario = contas.reduce((acc, c) => {
+  // 1. Mapear saldos das contas bancárias cadastradas
+  contas.forEach(c => {
     const propName = c.proprietario_nome || 'Eu';
-    acc[propName] = (acc[propName] || 0) + Number(c.saldo_atual);
-    return acc;
-  }, {});
+    if (!membrosMap[propName]) {
+      membrosMap[propName] = { temContaBancaria: true, saldoContas: 0, saldoLancamentos: 0 };
+    }
+    membrosMap[propName].temContaBancaria = true;
+    membrosMap[propName].saldoContas += Number(c.saldo_atual);
+  });
+
+  // 2. Mapear lançamentos pagos para membros sem conta bancária registrada
+  const lancamentosPagos = lancamentos.filter(l => l.status === 'PAGO');
+  lancamentosPagos.forEach(l => {
+    const propName = l.usuario_nome || 'Eu';
+    if (!membrosMap[propName]) {
+      membrosMap[propName] = { temContaBancaria: false, saldoContas: 0, saldoLancamentos: 0 };
+    }
+    const val = Number(l.valor);
+    if (l.tipo === 'RECEITA') {
+      membrosMap[propName].saldoLancamentos += val;
+    } else if (l.tipo === 'DESPESA') {
+      membrosMap[propName].saldoLancamentos -= val;
+    }
+  });
+
+  // 3. Consolidar resumo por proprietário e saldo total somado
+  const resumoPorProprietario = {};
+  let saldoTotal = 0;
+
+  Object.keys(membrosMap).forEach(propName => {
+    const membro = membrosMap[propName];
+    const saldoFinalMembro = membro.temContaBancaria ? membro.saldoContas : membro.saldoLancamentos;
+    resumoPorProprietario[propName] = saldoFinalMembro;
+    saldoTotal += saldoFinalMembro;
+  });
 
   // Lançamentos do Mês Atual (para KPIs e gráficos)
   const lancamentosMesAtual = lancamentos.filter(l => {
