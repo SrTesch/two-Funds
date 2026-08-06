@@ -65,10 +65,18 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
       metodo_pagamento
     } = req.body;
 
-    const [rows] = await connection.query<RowDataPacket[]>(
-      'SELECT * FROM lancamentos WHERE id = ? AND codigo_cc = ?',
-      [id, user.codigo_cc]
-    );
+    const userCodigoCc = user.codigo_cc ? user.codigo_cc.trim() : null;
+
+    let queryCheck = 'SELECT * FROM lancamentos WHERE id = ? AND (usuario_id = ?';
+    const paramsCheck: any[] = [id, user.id];
+
+    if (userCodigoCc) {
+      queryCheck += ' OR TRIM(codigo_cc) = ?';
+      paramsCheck.push(userCodigoCc);
+    }
+    queryCheck += ')';
+
+    const [rows] = await connection.query<RowDataPacket[]>(queryCheck, paramsCheck);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Lançamento não encontrado ou sem permissão.' });
@@ -151,10 +159,18 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res) => {
     }
 
     const { id } = req.params;
-    const [rows] = await connection.query<RowDataPacket[]>(
-      'SELECT * FROM lancamentos WHERE id = ? AND codigo_cc = ?',
-      [id, user.codigo_cc]
-    );
+    const userCodigoCc = user.codigo_cc ? user.codigo_cc.trim() : null;
+
+    let queryCheck = 'SELECT * FROM lancamentos WHERE id = ? AND (usuario_id = ?';
+    const paramsCheck: any[] = [id, user.id];
+
+    if (userCodigoCc) {
+      queryCheck += ' OR TRIM(codigo_cc) = ?';
+      paramsCheck.push(userCodigoCc);
+    }
+    queryCheck += ')';
+
+    const [rows] = await connection.query<RowDataPacket[]>(queryCheck, paramsCheck);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Lançamento não encontrado ou sem permissão.' });
