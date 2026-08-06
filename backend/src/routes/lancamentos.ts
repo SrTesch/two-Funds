@@ -28,8 +28,6 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
     if (personal === 'true') {
       query += ' AND l.usuario_id = ? AND (l.is_personal = TRUE OR l.is_personal = 1)';
       params.push(user.id);
-    } else {
-      query += ' AND (l.is_personal = FALSE OR l.is_personal = 0 OR l.is_personal IS NULL)';
     }
 
     if (status) {

@@ -22,9 +22,11 @@ router.get('/', async (req: AuthRequest, res) => {
     `;
     const params: any[] = [];
 
-    if (joint === 'true' && user.codigo_cc) {
-      query += ' WHERE (cb.codigo_cc = ? OR cb.usuario_id IN (SELECT id FROM usuarios WHERE codigo_cc = ?))';
-      params.push(user.codigo_cc, user.codigo_cc);
+    const codigo_cc = user.codigo_cc ? user.codigo_cc.trim() : null;
+
+    if (joint === 'true' && codigo_cc) {
+      query += ' WHERE (TRIM(cb.codigo_cc) = ? OR cb.usuario_id IN (SELECT id FROM usuarios WHERE TRIM(codigo_cc) = ?))';
+      params.push(codigo_cc, codigo_cc);
     } else {
       query += ' WHERE cb.usuario_id = ?';
       params.push(user.id);
