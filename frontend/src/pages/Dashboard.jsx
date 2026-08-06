@@ -67,21 +67,25 @@ const Dashboard = () => {
         return;
       }
       
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
+      try {
+        const profileRes = await api.get('/auth/profile', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const currentUser = profileRes.data;
+        setUser(currentUser);
+        localStorage.setItem('user', JSON.stringify(currentUser));
 
-      if (parsedUser.is_admin) {
-        try {
+        if (currentUser.is_admin) {
           const response = await api.get('/admin/pending', {
             headers: { Authorization: `Bearer ${token}` }
           });
           setPendingUsers(response.data);
-        } catch (err) {
-          console.error(err);
+        } else {
+          await fetchLancamentos(viewMode === 'personal');
+          await fetchContas(viewMode === 'joint');
         }
-      } else if (parsedUser.codigo_cc) {
-        await fetchLancamentos(viewMode === 'personal');
-        await fetchContas(viewMode === 'joint');
+      } catch (err) {
+        console.error(err);
       }
       setLoading(false);
     };
@@ -350,6 +354,7 @@ const Dashboard = () => {
         isOpen={isContasModalOpen}
         onClose={() => setIsContasModalOpen(false)}
         onContasUpdated={refreshAllData}
+        viewMode={viewMode}
       />
 
       <TransferenciaModal 

@@ -15,7 +15,7 @@ const BANCOS_PREDEFINIDOS = [
   { id: 'OUTROS', nome: 'Outro Banco / Dinheiro', cor: '#0F5132' }
 ];
 
-const ContasModal = ({ isOpen, onClose, onContasUpdated }) => {
+const ContasModal = ({ isOpen, onClose, onContasUpdated, viewMode = 'personal' }) => {
   const [contas, setContas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -34,12 +34,13 @@ const ContasModal = ({ isOpen, onClose, onContasUpdated }) => {
     if (isOpen) {
       fetchContas();
     }
-  }, [isOpen]);
+  }, [isOpen, viewMode]);
 
   const fetchContas = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await api.get('/contas', {
+      const isJoint = viewMode === 'joint';
+      const response = await api.get(`/contas?joint=${isJoint}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setContas(response.data);

@@ -24,6 +24,7 @@ const JointAccount = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUser(res.data);
+      localStorage.setItem('user', JSON.stringify(res.data));
       
       if (res.data.codigo_cc) {
         const reqs = await api.get('/joint/requests', {

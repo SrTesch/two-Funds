@@ -19,6 +19,8 @@ app.use(express.json());
 app.use('/contas', contasRoutes);
 
 describe('Contas Routes', () => {
+  const mockUserData = [{ id: 1, is_admin: 0, codigo_cc: 'CC123' }];
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -33,7 +35,9 @@ describe('Contas Routes', () => {
       const mockContas = [
         { id: 1, nome: 'Nubank', banco: 'NUBANK', saldo_atual: '500.00' }
       ];
-      (pool.query as jest.Mock).mockResolvedValueOnce([mockContas]);
+      (pool.query as jest.Mock)
+        .mockResolvedValueOnce([mockUserData]) // authenticateToken query
+        .mockResolvedValueOnce([mockContas]); // route query
 
       const res = await request(app)
         .get('/contas')
@@ -46,6 +50,8 @@ describe('Contas Routes', () => {
 
   describe('POST /contas', () => {
     it('deve retornar 400 se faltar o nome da conta', async () => {
+      (pool.query as jest.Mock).mockResolvedValueOnce([mockUserData]);
+
       const res = await request(app)
         .post('/contas')
         .set('Authorization', `Bearer ${mockUserToken}`)
@@ -56,7 +62,9 @@ describe('Contas Routes', () => {
     });
 
     it('deve criar conta bancária com sucesso', async () => {
-      (pool.query as jest.Mock).mockResolvedValueOnce([{ insertId: 10 }]);
+      (pool.query as jest.Mock)
+        .mockResolvedValueOnce([mockUserData]) // authenticateToken query
+        .mockResolvedValueOnce([{ insertId: 10 }]); // route query
 
       const res = await request(app)
         .post('/contas')
