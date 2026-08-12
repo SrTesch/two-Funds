@@ -163,4 +163,29 @@ router.post('/pagar', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+// Excluir fatura avulsa / retroativa
+router.delete('/avulsa/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const user = req.user;
+    if (!user || !user.codigo_cc) {
+      return res.status(403).json({ error: 'Conta conjunta não vinculada.' });
+    }
+    const { id } = req.params;
+    const [rows] = await pool.query<RowDataPacket[]>(
+      'SELECT * FROM faturas_avulsas WHERE id = ? AND codigo_cc = ?',
+      [id, user.codigo_cc]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Fatura avulsa não encontrada ou sem permissão.' });
+    }
+
+    await pool.query('DELETE FROM faturas_avulsas WHERE id = ?', [id]);
+    res.json({ message: 'Fatura avulsa removida com sucesso.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro interno ao excluir fatura avulsa.' });
+  }
+});
+
 export default router;

@@ -27,8 +27,9 @@ const LancamentoModal = ({ isOpen, onClose, viewMode, onLancamentoAdded, lancame
         setContaId(lancamentoToEdit.conta_id || '');
         setDescricao(lancamentoToEdit.descricao || '');
         setValor(lancamentoToEdit.valor || '');
-        if (lancamentoToEdit.data_lancamento) {
-          setDataLancamento(String(lancamentoToEdit.data_lancamento).split('T')[0]);
+        const rawDate = lancamentoToEdit.data_lancamento || lancamentoToEdit.data_vencimento;
+        if (rawDate) {
+          setDataLancamento(String(rawDate).split('T')[0]);
         }
         setMetodoPagamento(lancamentoToEdit.metodo_pagamento || 'PIX');
         setTotalParcelas(lancamentoToEdit.total_parcelas || 1);

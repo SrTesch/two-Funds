@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { CreditCard, Check, Calendar, Plus } from 'lucide-react';
+import { CreditCard, Check, Calendar, Plus, Edit2, Trash2 } from 'lucide-react';
 import FaturaRetroativaModal from '../components/FaturaRetroativaModal';
+import LancamentoModal from '../components/LancamentoModal';
 
 const Cartoes = () => {
   const [faturas, setFaturas] = useState([]);
@@ -12,6 +13,11 @@ const Cartoes = () => {
   const [viewMode, setViewMode] = useState('personal');
   const [isRetroativaModalOpen, setIsRetroativaModalOpen] = useState(false);
   const [selectedContaPagamento, setSelectedContaPagamento] = useState({});
+
+  // Estado para Edição de Lançamento
+  const [editingLancamento, setEditingLancamento] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   const navigate = useNavigate();
 
   const fetchFaturas = useCallback(async (isPersonal) => {
@@ -76,6 +82,34 @@ const Cartoes = () => {
       console.error(err);
       alert(err.response?.data?.error || 'Erro ao pagar fatura.');
     }
+  };
+
+  const handleDeleteItem = async (item) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta transação?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      if (item.origem === 'FATURA_AVULSA') {
+        await api.delete(`/faturas/avulsa/${item.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        await api.delete(`/lancamentos/${item.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+      fetchFaturas(viewMode === 'personal');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao remover transação.');
+    }
+  };
+
+  const handleOpenEdit = (item) => {
+    if (item.origem === 'FATURA_AVULSA') {
+      alert('Para alterar uma fatura retroativa, você pode excluí-la e cadastrá-la novamente com o valor atualizado.');
+      return;
+    }
+    setEditingLancamento(item);
+    setIsEditModalOpen(true);
   };
 
   if (loading) return null;
@@ -145,7 +179,7 @@ const Cartoes = () => {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
                   {[...pendentes, ...pagos].map(l => (
-                    <div key={`${l.origem}-${l.id}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', opacity: l.status === 'PAGO' ? 0.5 : 1 }}>
+                    <div key={`${l.origem}-${l.id}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem', opacity: l.status === 'PAGO' ? 0.5 : 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         {l.status === 'PAGO' ? <Check size={14} color="var(--success)" /> : <CreditCard size={14} color="var(--text-muted)" />}
                         <span>
@@ -155,7 +189,25 @@ const Cartoes = () => {
                           </span>
                         </span>
                       </div>
-                      <span style={{ fontWeight: 600 }}>R$ {Number(l.valor).toFixed(2).replace('.', ',')}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontWeight: 600 }}>R$ {Number(l.valor).toFixed(2).replace('.', ',')}</span>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button 
+                            onClick={() => handleOpenEdit(l)}
+                            style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', color: 'var(--text-muted)' }}
+                            title="Editar transação"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteItem(l)}
+                            style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', color: 'var(--error)' }}
+                            title="Excluir transação"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -201,6 +253,14 @@ const Cartoes = () => {
         onClose={() => setIsRetroativaModalOpen(false)}
         viewMode={viewMode}
         onFaturaAdded={() => fetchFaturas(viewMode === 'personal')}
+      />
+
+      <LancamentoModal 
+        isOpen={isEditModalOpen}
+        onClose={() => { setIsEditModalOpen(false); setEditingLancamento(null); }}
+        viewMode={viewMode}
+        onLancamentoAdded={() => fetchFaturas(viewMode === 'personal')}
+        lancamentoToEdit={editingLancamento}
       />
     </div>
   );

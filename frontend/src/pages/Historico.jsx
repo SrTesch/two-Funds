@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { Filter, ArrowRightLeft, Landmark, Edit2, Trash2 } from 'lucide-react';
+import { Filter, ArrowRightLeft, Landmark, Edit2, Trash2, Search, X } from 'lucide-react';
 import { parseLocalDate, formatLocalDate } from '../utils/date';
 import LancamentoModal from '../components/LancamentoModal';
 
@@ -14,6 +14,7 @@ const Historico = () => {
   const [viewMode, setViewMode] = useState('personal');
   const [filtroMes, setFiltroMes] = useState(new Date().getMonth() + 1);
   const [filtroAno, setFiltroAno] = useState(new Date().getFullYear());
+  const [filtroBusca, setFiltroBusca] = useState('');
 
   // Estado para Edição de Lançamento
   const [editingLancamento, setEditingLancamento] = useState(null);
@@ -86,12 +87,48 @@ const Historico = () => {
 
   const filtradosLancamentos = lancamentos.filter(l => {
     const d = parseLocalDate(l.data_lancamento || l.data_vencimento);
-    return (d.getMonth() + 1) === Number(filtroMes) && d.getFullYear() === Number(filtroAno);
+    if (filtroMes !== 'todos' && (d.getMonth() + 1) !== Number(filtroMes)) return false;
+    if (filtroAno !== 'todos' && d.getFullYear() !== Number(filtroAno)) return false;
+
+    if (!filtroBusca.trim()) return true;
+
+    const term = filtroBusca.toLowerCase().trim();
+    const desc = (l.descricao || '').toLowerCase();
+    const cat = (l.categoria_nome || '').toLowerCase();
+    const meP = (l.metodo_pagamento || '').toLowerCase();
+    const user = (l.usuario_nome || '').toLowerCase();
+    const conta = (l.conta_nome || '').toLowerCase();
+    const tipo = (l.tipo || '').toLowerCase();
+    const status = (l.status || '').toLowerCase();
+    const valor = l.valor ? String(l.valor).toLowerCase() : '';
+    const valorFormatado = l.valor ? Number(l.valor).toFixed(2).replace('.', ',') : '';
+    const dataFormatada = l.data_lancamento ? formatLocalDate(l.data_lancamento).toLowerCase() : '';
+
+    return desc.includes(term) || cat.includes(term) || meP.includes(term) || 
+           user.includes(term) || conta.includes(term) || tipo.includes(term) || 
+           status.includes(term) || valor.includes(term) || valorFormatado.includes(term) ||
+           dataFormatada.includes(term);
   });
 
   const filtradasTransferencias = transferencias.filter(t => {
     const d = parseLocalDate(t.data_transferencia);
-    return (d.getMonth() + 1) === Number(filtroMes) && d.getFullYear() === Number(filtroAno);
+    if (filtroMes !== 'todos' && (d.getMonth() + 1) !== Number(filtroMes)) return false;
+    if (filtroAno !== 'todos' && d.getFullYear() !== Number(filtroAno)) return false;
+
+    if (!filtroBusca.trim()) return true;
+
+    const term = filtroBusca.toLowerCase().trim();
+    const desc = (t.descricao || '').toLowerCase();
+    const origem = (t.conta_origem_nome || '').toLowerCase();
+    const destino = (t.conta_destino_nome || '').toLowerCase();
+    const user = (t.usuario_nome || '').toLowerCase();
+    const valor = t.valor ? String(t.valor).toLowerCase() : '';
+    const valorFormatado = t.valor ? Number(t.valor).toFixed(2).replace('.', ',') : '';
+    const dataFormatada = t.data_transferencia ? formatLocalDate(t.data_transferencia).toLowerCase() : '';
+
+    return desc.includes(term) || origem.includes(term) || destino.includes(term) || 
+           user.includes(term) || valor.includes(term) || valorFormatado.includes(term) ||
+           dataFormatada.includes(term);
   });
 
   if (loading) return null;
@@ -123,18 +160,44 @@ const Historico = () => {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', alignItems: 'center' }}>
-        <Filter size={20} color="var(--text-muted)" />
-        <select value={filtroMes} onChange={(e) => setFiltroMes(e.target.value)} className="input-field" style={{ padding: '8px', height: 'auto' }}>
-          {Array.from({length: 12}).map((_, i) => (
-            <option key={i+1} value={i+1}>{new Date(0, i).toLocaleString('pt-BR', { month: 'long' })}</option>
-          ))}
-        </select>
-        <select value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)} className="input-field" style={{ padding: '8px', height: 'auto' }}>
-          {[2025, 2026, 2027].map(ano => (
-            <option key={ano} value={ano}>{ano}</option>
-          ))}
-        </select>
+      {/* Filtro de Busca por Texto e Filtros de Data */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+        <div style={{ position: 'relative', width: '100%' }}>
+          <Search size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+          <input
+            type="text"
+            className="input-field"
+            placeholder="Buscar por descrição, categoria, conta, valor..."
+            value={filtroBusca}
+            onChange={(e) => setFiltroBusca(e.target.value)}
+            style={{ paddingLeft: '38px', paddingRight: filtroBusca ? '36px' : '12px', height: '42px', fontSize: '0.9rem' }}
+          />
+          {filtroBusca && (
+            <button
+              onClick={() => setFiltroBusca('')}
+              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+              title="Limpar busca"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <Filter size={20} color="var(--text-muted)" />
+          <select value={filtroMes} onChange={(e) => setFiltroMes(e.target.value)} className="input-field" style={{ padding: '8px', height: 'auto', flex: 1 }}>
+            <option value="todos">Todos os Meses</option>
+            {Array.from({length: 12}).map((_, i) => (
+              <option key={i+1} value={i+1}>{new Date(0, i).toLocaleString('pt-BR', { month: 'long' })}</option>
+            ))}
+          </select>
+          <select value={filtroAno} onChange={(e) => setFiltroAno(e.target.value)} className="input-field" style={{ padding: '8px', height: 'auto', flex: 1 }}>
+            <option value="todos">Todos os Anos</option>
+            {[2025, 2026, 2027].map(ano => (
+              <option key={ano} value={ano}>{ano}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
