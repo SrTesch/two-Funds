@@ -94,7 +94,8 @@ const TransferenciaModal = ({ isOpen, onClose, onTransferenciaDone, transferenci
       if (onTransferenciaDone) onTransferenciaDone();
       handleClose();
     } catch (err) {
-      setError(err.response?.data?.error || 'Erro ao realizar transferência.');
+      const msg = err.response?.data?.error || (typeof err.response?.data === 'string' ? err.response.data : 'Erro ao realizar transferência.');
+      setError(msg);
     } finally {
       setLoading(false);
     }

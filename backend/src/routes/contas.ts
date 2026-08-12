@@ -294,10 +294,16 @@ router.put('/transferencias/:id', async (req: AuthRequest, res) => {
     const { id } = req.params;
     const { conta_origem_id, conta_destino_id, valor, descricao, data_transferencia } = req.body;
 
-    const [rows] = await connection.query<RowDataPacket[]>(
-      'SELECT * FROM transferencias WHERE id = ? AND usuario_id = ?',
-      [id, user.id]
-    );
+    let queryCheck = 'SELECT * FROM transferencias WHERE id = ? AND (usuario_id = ?';
+    const paramsCheck: any[] = [id, user.id];
+
+    if (user.codigo_cc) {
+      queryCheck += ' OR usuario_id IN (SELECT id FROM usuarios WHERE codigo_cc = ?)';
+      paramsCheck.push(user.codigo_cc);
+    }
+    queryCheck += ')';
+
+    const [rows] = await connection.query<RowDataPacket[]>(queryCheck, paramsCheck);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Transferência não encontrada ou permissão negada.' });
@@ -362,10 +368,16 @@ router.delete('/transferencias/:id', async (req: AuthRequest, res) => {
 
     const { id } = req.params;
 
-    const [rows] = await connection.query<RowDataPacket[]>(
-      'SELECT * FROM transferencias WHERE id = ? AND usuario_id = ?',
-      [id, user.id]
-    );
+    let queryCheck = 'SELECT * FROM transferencias WHERE id = ? AND (usuario_id = ?';
+    const paramsCheck: any[] = [id, user.id];
+
+    if (user.codigo_cc) {
+      queryCheck += ' OR usuario_id IN (SELECT id FROM usuarios WHERE codigo_cc = ?)';
+      paramsCheck.push(user.codigo_cc);
+    }
+    queryCheck += ')';
+
+    const [rows] = await connection.query<RowDataPacket[]>(queryCheck, paramsCheck);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Transferência não encontrada ou permissão negada.' });
