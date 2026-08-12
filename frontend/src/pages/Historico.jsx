@@ -5,6 +5,7 @@ import api from '../services/api';
 import { Filter, ArrowRightLeft, Landmark, Edit2, Trash2, Search, X } from 'lucide-react';
 import { parseLocalDate, formatLocalDate } from '../utils/date';
 import LancamentoModal from '../components/LancamentoModal';
+import TransferenciaModal from '../components/TransferenciaModal';
 
 const Historico = () => {
   const [lancamentos, setLancamentos] = useState([]);
@@ -19,6 +20,10 @@ const Historico = () => {
   // Estado para Edição de Lançamento
   const [editingLancamento, setEditingLancamento] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Estado para Edição de Transferência
+  const [editingTransferencia, setEditingTransferencia] = useState(null);
+  const [isEditTransferenciaModalOpen, setIsEditTransferenciaModalOpen] = useState(false);
   
   const navigate = useNavigate();
 
@@ -83,6 +88,24 @@ const Historico = () => {
   const handleOpenEdit = (lancamento) => {
     setEditingLancamento(lancamento);
     setIsEditModalOpen(true);
+  };
+
+  const handleDeleteTransferencia = async (id) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta transferência? Os saldos das contas serão estornados.')) return;
+    try {
+      const token = localStorage.getItem('token');
+      await api.delete(`/contas/transferencias/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      await fetchTransferencias(viewMode === 'joint');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao remover transferência.');
+    }
+  };
+
+  const handleOpenEditTransferencia = (transferencia) => {
+    setEditingTransferencia(transferencia);
+    setIsEditTransferenciaModalOpen(true);
   };
 
   const filtradosLancamentos = lancamentos.filter(l => {
@@ -274,8 +297,26 @@ const Historico = () => {
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Por: {t.usuario_nome}</div>
                     </div>
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)' }}>
-                    R$ {Number(t.valor).toFixed(2).replace('.', ',')}
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                    <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)' }}>
+                      R$ {Number(t.valor).toFixed(2).replace('.', ',')}
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                      <button 
+                        onClick={() => handleOpenEditTransferencia(t)}
+                        style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', color: 'var(--text-muted)' }}
+                        title="Editar transferência"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteTransferencia(t.id)}
+                        style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', color: 'var(--error)' }}
+                        title="Excluir transferência"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -284,13 +325,21 @@ const Historico = () => {
         )}
       </motion.div>
 
-      {/* Modal de Edição */}
+      {/* Modal de Edição de Lançamento */}
       <LancamentoModal 
         isOpen={isEditModalOpen}
         onClose={() => { setIsEditModalOpen(false); setEditingLancamento(null); }}
         viewMode={viewMode}
         onLancamentoAdded={() => fetchLancamentos(viewMode === 'personal')}
         lancamentoToEdit={editingLancamento}
+      />
+
+      {/* Modal de Edição de Transferência */}
+      <TransferenciaModal 
+        isOpen={isEditTransferenciaModalOpen}
+        onClose={() => { setIsEditTransferenciaModalOpen(false); setEditingTransferencia(null); }}
+        onTransferenciaDone={() => fetchTransferencias(viewMode === 'joint')}
+        transferenciaToEdit={editingTransferencia}
       />
     </div>
   );

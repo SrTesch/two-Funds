@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 import { X, ArrowRightLeft } from 'lucide-react';
 
-const TransferenciaModal = ({ isOpen, onClose, onTransferenciaDone }) => {
+const TransferenciaModal = ({ isOpen, onClose, onTransferenciaDone, transferenciaToEdit = null }) => {
   const [contasMinhas, setContasMinhas] = useState([]);
   const [contasTodas, setContasTodas] = useState([]);
   const [contaOrigemId, setContaOrigemId] = useState('');
@@ -17,8 +17,21 @@ const TransferenciaModal = ({ isOpen, onClose, onTransferenciaDone }) => {
   useEffect(() => {
     if (isOpen) {
       fetchContas();
+      if (transferenciaToEdit) {
+        setContaOrigemId(transferenciaToEdit.conta_origem_id || '');
+        setContaDestinoId(transferenciaToEdit.conta_destino_id || '');
+        setValor(transferenciaToEdit.valor || '');
+        setDescricao(transferenciaToEdit.descricao || '');
+        if (transferenciaToEdit.data_transferencia) {
+          setDataTransferencia(String(transferenciaToEdit.data_transferencia).split('T')[0]);
+        }
+      } else {
+        setValor('');
+        setDescricao('');
+        setDataTransferencia(new Date().toISOString().split('T')[0]);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, transferenciaToEdit]);
 
   const fetchContas = async () => {
     try {
@@ -35,7 +48,7 @@ const TransferenciaModal = ({ isOpen, onClose, onTransferenciaDone }) => {
       });
       setContasTodas(resTodas.data);
 
-      if (resMinhas.data.length > 0) {
+      if (resMinhas.data.length > 0 && !transferenciaToEdit) {
         setContaOrigemId(resMinhas.data[0].id);
       }
     } catch (err) {
@@ -47,7 +60,7 @@ const TransferenciaModal = ({ isOpen, onClose, onTransferenciaDone }) => {
     e.preventDefault();
     setError('');
 
-    if (contaOrigemId === contaDestinoId) {
+    if (String(contaOrigemId) === String(contaDestinoId)) {
       setError('A conta de origem e de destino não podem ser iguais.');
       return;
     }
@@ -56,15 +69,27 @@ const TransferenciaModal = ({ isOpen, onClose, onTransferenciaDone }) => {
 
     try {
       const token = localStorage.getItem('token');
-      await api.post('/contas/transferir', {
-        conta_origem_id: contaOrigemId,
-        conta_destino_id: contaDestinoId,
-        valor: parseFloat(valor),
-        descricao: descricao || 'Transferência entre contas',
-        data_transferencia: dataTransferencia
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      if (transferenciaToEdit) {
+        await api.put(`/contas/transferencias/${transferenciaToEdit.id}`, {
+          conta_origem_id: contaOrigemId,
+          conta_destino_id: contaDestinoId,
+          valor: parseFloat(valor),
+          descricao: descricao || 'Transferência entre contas',
+          data_transferencia: dataTransferencia
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        await api.post('/contas/transferir', {
+          conta_origem_id: contaOrigemId,
+          conta_destino_id: contaDestinoId,
+          valor: parseFloat(valor),
+          descricao: descricao || 'Transferência entre contas',
+          data_transferencia: dataTransferencia
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
 
       if (onTransferenciaDone) onTransferenciaDone();
       handleClose();
@@ -107,7 +132,7 @@ const TransferenciaModal = ({ isOpen, onClose, onTransferenciaDone }) => {
 
           <h2 style={{ fontSize: '1.25rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <ArrowRightLeft size={22} color="var(--primary)" />
-            Transferência entre Contas
+            {transferenciaToEdit ? 'Editar Transferência' : 'Transferência entre Contas'}
           </h2>
 
           <form onSubmit={handleSubmit} style={{ textAlign: 'left' }}>

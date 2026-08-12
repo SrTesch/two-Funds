@@ -284,4 +284,118 @@ router.get('/transferencias', async (req: AuthRequest, res) => {
   }
 });
 
+// Editar transferência
+router.put('/transferencias/:id', async (req: AuthRequest, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: 'Não autorizado.' });
+
+    const { id } = req.params;
+    const { conta_origem_id, conta_destino_id, valor, descricao, data_transferencia } = req.body;
+
+    const [rows] = await connection.query<RowDataPacket[]>(
+      'SELECT * FROM transferencias WHERE id = ? AND usuario_id = ?',
+      [id, user.id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Transferência não encontrada ou permissão negada.' });
+    }
+
+    const oldTransf = rows[0];
+    const novoValor = valor !== undefined ? parseFloat(valor) : Number(oldTransf.valor);
+    const novaOrigem = conta_origem_id ? Number(conta_origem_id) : oldTransf.conta_origem_id;
+    const novaDestino = conta_destino_id ? Number(conta_destino_id) : oldTransf.conta_destino_id;
+    const dataTransf = data_transferencia || oldTransf.data_transferencia;
+
+    if (novaOrigem === novaDestino) {
+      return res.status(400).json({ error: 'A conta de origem e destino não podem ser a mesma.' });
+    }
+
+    await connection.beginTransaction();
+
+    // Reverter saldos antigos
+    await connection.query(
+      'UPDATE contas_bancarias SET saldo_atual = saldo_atual + ? WHERE id = ?',
+      [oldTransf.valor, oldTransf.conta_origem_id]
+    );
+    await connection.query(
+      'UPDATE contas_bancarias SET saldo_atual = saldo_atual - ? WHERE id = ?',
+      [oldTransf.valor, oldTransf.conta_destino_id]
+    );
+
+    // Aplicar saldos novos
+    await connection.query(
+      'UPDATE contas_bancarias SET saldo_atual = saldo_atual - ? WHERE id = ?',
+      [novoValor, novaOrigem]
+    );
+    await connection.query(
+      'UPDATE contas_bancarias SET saldo_atual = saldo_atual + ? WHERE id = ?',
+      [novoValor, novaDestino]
+    );
+
+    await connection.query(
+      `UPDATE transferencias 
+       SET conta_origem_id = ?, conta_destino_id = ?, valor = ?, descricao = ?, data_transferencia = ?
+       WHERE id = ?`,
+      [novaOrigem, novaDestino, novoValor, descricao || oldTransf.descricao, dataTransf, id]
+    );
+
+    await connection.commit();
+    res.json({ message: 'Transferência atualizada com sucesso.' });
+  } catch (error) {
+    await connection.rollback();
+    console.error(error);
+    res.status(500).json({ error: 'Erro interno ao atualizar transferência.' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Excluir transferência
+router.delete('/transferencias/:id', async (req: AuthRequest, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: 'Não autorizado.' });
+
+    const { id } = req.params;
+
+    const [rows] = await connection.query<RowDataPacket[]>(
+      'SELECT * FROM transferencias WHERE id = ? AND usuario_id = ?',
+      [id, user.id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Transferência não encontrada ou permissão negada.' });
+    }
+
+    const transf = rows[0];
+
+    await connection.beginTransaction();
+
+    // Reverter os valores nas contas de origem e destino
+    await connection.query(
+      'UPDATE contas_bancarias SET saldo_atual = saldo_atual + ? WHERE id = ?',
+      [transf.valor, transf.conta_origem_id]
+    );
+    await connection.query(
+      'UPDATE contas_bancarias SET saldo_atual = saldo_atual - ? WHERE id = ?',
+      [transf.valor, transf.conta_destino_id]
+    );
+
+    await connection.query('DELETE FROM transferencias WHERE id = ?', [id]);
+
+    await connection.commit();
+    res.json({ message: 'Transferência removida e saldos revertidos com sucesso.' });
+  } catch (error) {
+    await connection.rollback();
+    console.error(error);
+    res.status(500).json({ error: 'Erro interno ao excluir transferência.' });
+  } finally {
+    connection.release();
+  }
+});
+
 export default router;
